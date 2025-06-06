@@ -28,7 +28,57 @@ app.post('/gerar-legenda', async (req, res) => {
     res.status(500).json({ error: 'Erro ao gerar legenda' });
   }
 });
+app.post('/gerar-roteiro', async (req, res) => {
+  const { prompt } = req.body;
 
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+    });
+
+    const roteiro = completion.choices[0].message.content;
+    res.json({ roteiro });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao gerar roteiro' });
+  }
+});app.post('/gerar-copy-design', async (req, res) => {
+  const { prompt } = req.body;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+    });
+
+    const copy = completion.choices[0].message.content;
+    res.json({ copy });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao gerar copy' });
+  }
+});
+
+app.post('/gerar-copy-content', async (req, res) => {
+  const { prompt } = req.body;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+    });
+
+    const copy = completion.choices[0].message.content;
+    res.json({ copy });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao gerar copy' });
+  }
+});
 app.listen(process.env.PORT, () => {
   console.log(`Servidor rodando em http://localhost:${process.env.PORT}`);
 });
