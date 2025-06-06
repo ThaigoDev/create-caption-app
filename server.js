@@ -44,7 +44,8 @@ app.post('/gerar-roteiro', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Erro ao gerar roteiro' });
   }
-});app.post('/gerar-copy-design', async (req, res) => {
+});
+app.post('/gerar-copy-visual', async (req, res) => {
   const { prompt } = req.body;
 
   try {
