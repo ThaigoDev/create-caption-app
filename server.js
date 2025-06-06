@@ -30,5 +30,5 @@ app.post('/gerar-legenda', async (req, res) => {
 });
 
 app.listen(process.env.PORT, () => {
-  console.log('Servidor rodando em http://localhost:3000');
+  console.log(`Servidor rodando em http://localhost:${process.env.PORT}`);
 });
