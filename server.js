@@ -79,6 +79,23 @@ app.post('/gerar-copy-content', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Erro ao gerar copy' });
   }
+}); 
+app.post('/analise-content', async (req, res) => {
+  const { prompt } = req.body;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+    });
+
+    const analise = completion.choices[0].message.content;
+    res.json({ analise });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao gerar análise' });
+  }
 });
 app.listen(process.env.PORT, () => {
   console.log(`Servidor rodando em http://localhost:${process.env.PORT}`);
