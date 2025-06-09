@@ -97,6 +97,23 @@ app.post('/analise-content', async (req, res) => {
     res.status(500).json({ error: 'Erro ao gerar análise' });
   }
 });
+app.post('/gerar-entrevista', async (req, res) => {
+  const { prompt } = req.body;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+    });
+
+    const entrevista = completion.choices[0].message.content;
+    res.json({ entrevista });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao gerar Entrevista' });
+  }
+});
 app.listen(process.env.PORT, () => {
   console.log(`Servidor rodando em http://localhost:${process.env.PORT}`);
 });
