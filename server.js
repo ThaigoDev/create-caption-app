@@ -1,136 +1,88 @@
 // servidor.js
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors'); // ✨ Já está importado!
+const cors = require('cors');
 require('dotenv').config();
-const { OpenAI } = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// --- INICIALIZAÇÃO DO CLIENTE GEMINI ---
+// Pega a chave da API do arquivo .env
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Configurações do modelo. Você pode ajustar a temperatura e outros parâmetros aqui.
+const generationConfig = {
+  temperature: 0.7,
+};
+
+// Escolha do modelo do Gemini. 'gemini-1.5-flash' é rápido e eficiente.
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig });
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-// Middlewares
-app.use(bodyParser.json()); // Para analisar JSON no corpo das requisições
-app.use(express.static('public')); // Se você estiver servindo arquivos estáticos de um diretório 'public'
+// --- MIDDLEWARES ---
+app.use(bodyParser.json());
+app.use(cors()); // Permite requisições de qualquer origem (ideal para desenvolvimento)
+app.use(express.static('public'));
 
-// ✨ CONFIGURAÇÃO CORS:
-// Esta linha já permite que QUALQUER origem faça requisições à sua API.
-// Para fins de desenvolvimento (como http://127.0.0.1:5500), isso é ideal.
-// Se você for para produção, considere a opção mais segura abaixo.
-app.use(cors());
-
-// ✨ EXEMPLO para Produção: Configuração CORS mais restritiva (DESCOMENTE SE PRECISAR)
 /*
+// ✨ EXEMPLO para Produção: Configuração CORS mais restritiva (DESCOMENTE SE PRECISAR)
 app.use(cors({
-  origin: ['http://127.0.0.1:5500', 'https://SEU_DOMINIO_DE_PRODUCAO.com'], // Substitua pelo seu domínio real em produção
-  methods: ['GET', 'POST'], // Especifique os métodos HTTP que suas rotas usam
-  allowedHeaders: ['Content-Type', 'Authorization'], // Especifique cabeçalhos adicionais que seu frontend envia
+  origin: ['http://127.0.0.1:5500', 'https://SEU_DOMINIO_DE_PRODUCAO.com'], // Substitua pelo seu domínio
+  methods: ['POST'], // Apenas o método POST é usado neste servidor
+  allowedHeaders: ['Content-Type'],
 }));
 */
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Rota para gerar legenda
-app.post('/gerar-legenda', async (req, res) => {
-  const { prompt } = req.body;
-  try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-    });
-    const legenda = completion.choices[0].message.content;
-    res.json({ legenda });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao gerar legenda' });
+// --- FUNÇÃO REUTILIZÁVEL PARA GERAR CONTEÚDO ---
+/**
+ * Gera conteúdo usando o modelo Gemini com base em um prompt.
+ * @param {string} prompt O texto de entrada para o modelo.
+ * @param {import('express').Response} res O objeto de resposta do Express.
+ * @param {string} responseKey A chave que será usada no JSON de resposta (ex: 'legenda', 'roteiro').
+ */
+const gerarConteudoGemini = async (prompt, res, responseKey) => {
+  if (!prompt) {
+    return res.status(400).json({ error: 'O campo "prompt" é obrigatório.' });
   }
-});
 
-// Rota para gerar roteiro
-app.post('/gerar-roteiro', async (req, res) => {
-  const { prompt } = req.body;
   try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-    });
-    const roteiro = completion.choices[0].message.content;
-    res.json({ roteiro });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    // Retorna a resposta no formato { [responseKey]: "texto gerado" }
+    res.json({ [responseKey]: text });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao gerar roteiro' });
+    console.error("Erro na API do Gemini:", err);
+    res.status(500).json({ error: `Erro ao gerar ${responseKey}` });
   }
+};
+
+
+// --- ROTAS DA API ---
+// Todas as rotas agora usam a função reutilizável para manter o código limpo (DRY).
+
+app.post('/gerar-legenda', (req, res) => {
+  gerarConteudoGemini(req.body.prompt, res, 'legenda');
 });
 
-// Rota para gerar copy visual
-app.post('/gerar-copy-visual', async (req, res) => {
-  const { prompt } = req.body;
-  try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-    });
-    const copy = completion.choices[0].message.content;
-    res.json({ copy });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao gerar copy' });
-  }
+app.post('/gerar-roteiro', (req, res) => {
+  gerarConteudoGemini(req.body.prompt, res, 'roteiro');
 });
 
-// Rota para gerar copy de conteúdo
-app.post('/gerar-copy-content', async (req, res) => {
-  const { prompt } = req.body;
-  try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-    });
-    const copy = completion.choices[0].message.content;
-    res.json({ copy });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao gerar copy' });
-  }
+app.post('/gerar-copy-visual', (req, res) => {
+  gerarConteudoGemini(req.body.prompt, res, 'copy');
 });
 
-// Rota de análise de conteúdo (aquela que seu frontend está chamando)
-app.post('/analise-content', async (req, res) => {
-  const { prompt } = req.body;
-  try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-    });
-    const analise = completion.choices[0].message.content;
-    res.json({ analise });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao gerar análise' });
-  }
+app.post('/gerar-copy-content', (req, res) => {
+  gerarConteudoGemini(req.body.prompt, res, 'copy');
 });
 
-// Rota para gerar entrevista
-app.post('/gerar-entrevista', async (req, res) => {
-  const { prompt } = req.body;
-  try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-    });
-    const entrevista = completion.choices[0].message.content;
-    res.json({ entrevista });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao gerar Entrevista' });
-  }
+app.post('/analise-content', (req, res) => {
+  gerarConteudoGemini(req.body.prompt, res, 'analise');
 });
 
-// Inicia o servidor
-app.listen(process.env.PORT || 3000, () => { // Adicione || 3000 para um fallback caso PORT não esteja definido
-  console.log(`Servidor rodando em http://localhost:${process.env.PORT || 3000}`);
-});
+app.post('/gerar-entrevista', (req, res) =>
