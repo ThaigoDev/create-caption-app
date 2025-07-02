@@ -3,86 +3,118 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 require('dotenv').config();
+// 1. TROCA da biblioteca OpenAI pela do Google Generative AI
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// --- INICIALIZAÇÃO DO CLIENTE GEMINI ---
-// Pega a chave da API do arquivo .env
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Configurações do modelo. Você pode ajustar a temperatura e outros parâmetros aqui.
-const generationConfig = {
-  temperature: 0.7,
-};
-
-// Escolha do modelo do Gemini. 'gemini-1.5-flash' é rápido e eficiente.
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig });
-
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// --- MIDDLEWARES ---
+// Middlewares
 app.use(bodyParser.json());
-app.use(cors()); // Permite requisições de qualquer origem (ideal para desenvolvimento)
 app.use(express.static('public'));
+app.use(cors());
 
-/*
-// ✨ EXEMPLO para Produção: Configuração CORS mais restritiva (DESCOMENTE SE PRECISAR)
-app.use(cors({
-  origin: ['http://127.0.0.1:5500', 'https://SEU_DOMINIO_DE_PRODUCAO.com'], // Substitua pelo seu domínio
-  methods: ['POST'], // Apenas o método POST é usado neste servidor
-  allowedHeaders: ['Content-Type'],
-}));
-*/
-
-
-// --- FUNÇÃO REUTILIZÁVEL PARA GERAR CONTEÚDO ---
-/**
- * Gera conteúdo usando o modelo Gemini com base em um prompt.
- * @param {string} prompt O texto de entrada para o modelo.
- * @param {import('express').Response} res O objeto de resposta do Express.
- * @param {string} responseKey A chave que será usada no JSON de resposta (ex: 'legenda', 'roteiro').
- */
-const gerarConteudoGemini = async (prompt, res, responseKey) => {
-  if (!prompt) {
-    return res.status(400).json({ error: 'O campo "prompt" é obrigatório.' });
+// 2. INICIALIZAÇÃO do cliente do Gemini
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ 
+  model: "gemini-1.5-flash", // Um modelo rápido e eficiente do Gemini
+  generationConfig: {
+    temperature: 0.7, // A temperatura é definida aqui na configuração do modelo
   }
+});
 
+
+// Rota para gerar legenda
+app.post('/gerar-legenda', async (req, res) => {
+  const { prompt } = req.body;
+  try {
+    // 3. ADAPTAÇÃO da chamada para a API do Gemini
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const legenda = response.text();
+    
+    res.json({ legenda });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao gerar legenda com o Gemini' });
+  }
+});
+
+// Rota para gerar roteiro
+app.post('/gerar-roteiro', async (req, res) => {
+  const { prompt } = req.body;
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
-    
-    // Retorna a resposta no formato { [responseKey]: "texto gerado" }
-    res.json({ [responseKey]: text });
+    const roteiro = response.text();
 
+    res.json({ roteiro });
   } catch (err) {
-    console.error("Erro na API do Gemini:", err);
-    res.status(500).json({ error: `Erro ao gerar ${responseKey}` });
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao gerar roteiro com o Gemini' });
   }
-};
-
-
-// --- ROTAS DA API ---
-// Todas as rotas agora usam a função reutilizável para manter o código limpo (DRY).
-
-app.post('/gerar-legenda', (req, res) => {
-  gerarConteudoGemini(req.body.prompt, res, 'legenda');
 });
 
-app.post('/gerar-roteiro', (req, res) => {
-  gerarConteudoGemini(req.body.prompt, res, 'roteiro');
+// Rota para gerar copy visual
+app.post('/gerar-copy-visual', async (req, res) => {
+  const { prompt } = req.body;
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const copy = response.text();
+
+    res.json({ copy });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao gerar copy com o Gemini' });
+  }
 });
 
-app.post('/gerar-copy-visual', (req, res) => {
-  gerarConteudoGemini(req.body.prompt, res, 'copy');
+// Rota para gerar copy de conteúdo
+app.post('/gerar-copy-content', async (req, res) => {
+  const { prompt } = req.body;
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const copy = response.text();
+
+    res.json({ copy });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao gerar copy com o Gemini' });
+  }
 });
 
-app.post('/gerar-copy-content', (req, res) => {
-  gerarConteudoGemini(req.body.prompt, res, 'copy');
+// Rota de análise de conteúdo
+app.post('/analise-content', async (req, res) => {
+  const { prompt } = req.body;
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const analise = response.text();
+
+    res.json({ analise });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao gerar análise com o Gemini' });
+  }
 });
 
-app.post('/analise-content', (req, res) => {
-  gerarConteudoGemini(req.body.prompt, res, 'analise');
+// Rota para gerar entrevista
+app.post('/gerar-entrevista', async (req, res) => {
+  const { prompt } = req.body;
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const entrevista = response.text();
+
+    res.json({ entrevista });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao gerar Entrevista com o Gemini' });
+  }
 });
 
-app.post('/gerar-entrevista', (req, res) =>
+// Inicia o servidor
+app.listen(process.env.PORT || 3000, () => {
+  console.log(`Servidor rodando em http://localhost:${process.env.PORT || 3000}`);
+});
